@@ -47,7 +47,6 @@ int vsval_set_null(vsval *v);
 int vsval_set_numeric(vsval *v, int i);
 int vsval_set_float(vsval *v, float f);
 int vsval_set_double(vsval *v, double f);
-
 int vsval_set_text(vsval *v, const char *s);
 
 int vsval_print(vsval *v);
