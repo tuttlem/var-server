@@ -1,4 +1,4 @@
-#include "../include/typesys.h"
+#include "./typesys.h"
 
 type_desc type_desc_table[] = {
   { 0x0000, "null",   0, VST_NULL },
