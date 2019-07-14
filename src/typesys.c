@@ -1,15 +1,15 @@
 #include "../include/typesys.h"
 
 type_desc type_desc_table[] = {
-  { 0x0000, "null",   0, 0, 0, 0, 0, 0 },
-  { 0x0001, "bit",    1, 1, 0, 0, 0, 0 },
-  { 0x0002, "int8",   1, 1, 0, 0, 0, 0 },
-  { 0x0003, "int16",  2, 1, 0, 0, 0, 0 },
-  { 0x0004, "int32",  4, 1, 0, 0, 0, 0 },
-  { 0x0005, "int64",  8, 1, 0, 0, 0, 0 },
-  { 0x0010, "float4", 4, 0, 1, 0, 0, 0 },
-  { 0x0011, "float8", 8, 0, 1, 0, 0, 0 },
-  { 0x0020, "text",   0, 0, 0, 1, 0, 1 },
+  { 0x0000, "null",   0, VST_NULL },
+  { 0x0001, "bit",    1, VST_NUMERIC },
+  { 0x0002, "int8",   1, VST_NUMERIC },
+  { 0x0003, "int16",  2, VST_NUMERIC },
+  { 0x0004, "int32",  4, VST_NUMERIC },
+  { 0x0005, "int64",  8, VST_NUMERIC },
+  { 0x0010, "float4", 4, VST_FLOATING },
+  { 0x0011, "float8", 8, VST_FLOATING },
+  { 0x0020, "text",   0, VST_TEXT | VST_VARLEN },
 };
 
 int type_desc_table_len = 9;
@@ -57,7 +57,7 @@ int vsval_print(vsval *v) {
 
   if (desc->id == 0x0000) {
     printf("null");
-  } else if (desc->is_numeric) {
+  } else if (vst_is_numeric(desc)) {
     switch (desc->length) {
       case 1:
         printf("%i", *(char*)v->data);
@@ -75,7 +75,7 @@ int vsval_print(vsval *v) {
         return ERR_INVTYPE;
     }
     
-  } else if (desc->is_floating) {
+  } else if (vst_is_floating(desc)) {
     if (desc->length == 4) {
       printf("%f", *(float *)v->data);
     } else if (desc->length == 8) {
@@ -83,9 +83,9 @@ int vsval_print(vsval *v) {
     } else {
       return ERR_INVTYPE;
     }
-  } else if (desc->is_text) {
-    printf("%s", (char *)v->data);
-  } else if (desc->is_binary) {
+  } else if (vst_is_text(desc)) {
+      printf("%s", (char *)v->data);
+  } else if (vst_is_binary(desc)) {
     int idx = 0;
     for (idx = 0; idx < v->length; idx ++) {
       unsigned char c = ((unsigned char*)v->data)[idx];
@@ -112,7 +112,7 @@ int vsval_create(char *name, vsval **v) {
   newval = (vsval *)malloc(sizeof(vsval));
   newval->type_id = desc->id;
 
-  if (desc->is_var_length) {
+  if (vst_is_varlen(desc)) {
     newval->data = malloc(VSVAL_DEFAULT_LENGTH);
     newval->length = VSVAL_DEFAULT_LENGTH;
   } else {
@@ -197,7 +197,7 @@ int vsval_set_numeric(vsval *v, int i) {
 
   type_desc *desc = lookup_type(v->type_id);
 
-  if (desc == NULL || v->type_id == 0 || !desc->is_numeric) {
+  if (desc == NULL || v->type_id == 0 || !vst_is_numeric(desc)) {
     return ERR_INVTYPE;
   }
 
@@ -214,7 +214,7 @@ int vsval_set_float(vsval *v, float f) {
   type_desc *desc = lookup_type(v->type_id);
 
   if (desc == NULL || v->type_id == 0 || 
-      !desc->is_floating || desc->length != 4) {
+      !vst_is_floating(desc) || desc->length != 4) {
     return ERR_INVTYPE;
   }
 
@@ -231,7 +231,7 @@ int vsval_set_double(vsval *v, double f) {
   type_desc *desc = lookup_type(v->type_id);
 
   if (desc == NULL || v->type_id == 0 || 
-      !desc->is_floating || desc->length != 8) {
+      !vst_is_floating(desc) || desc->length != 8) {
     return ERR_INVTYPE;
   }
 
@@ -247,7 +247,7 @@ int vsval_set_text(vsval *v, const char *s) {
 
   type_desc *desc = lookup_type(v->type_id);
 
-  if (desc == NULL || v->type_id == 0 || !desc->is_text) {
+  if (desc == NULL || v->type_id == 0 || !vst_is_text(desc)) {
     return ERR_INVTYPE;
   }
 

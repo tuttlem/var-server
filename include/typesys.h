@@ -10,16 +10,25 @@
 
 #define VSVAL_DEFAULT_LENGTH 16
 
+#define VST_NULL      0x00000000
+#define VST_NUMERIC   0x00000001 
+#define VST_FLOATING  0x00000002
+#define VST_TEXT      0x00000004
+#define VST_BINARY    0x00000008
+#define VST_VARLEN    0x00000010
+
+#define vst_is_numeric(d)   (d->flags & VST_NUMERIC)
+#define vst_is_floating(d)  (d->flags & VST_FLOATING)
+#define vst_is_text(d)      (d->flags & VST_TEXT)
+#define vst_is_binary(d)    (d->flags & VST_BINARY)
+#define vst_is_varlen(d)    (d->flags & VST_VARLEN)
+
 typedef struct _tag_type_desc {
   unsigned int id;
   const char *name;
   unsigned int length;
 
-  unsigned int is_numeric;
-  unsigned int is_floating;
-  unsigned int is_text;
-  unsigned int is_binary;
-  unsigned int is_var_length;
+  unsigned int flags;
 } type_desc;
 
 typedef struct _tag_vsval {
