@@ -5,7 +5,7 @@ CC := gcc
 SRCDIR := src
 BUILDDIR := build
 CFLAGS := -g -Wall
-TARGET := bin/program
+TARGET := bin/var-server
 
 SRCEXT := c
 SOURCES := $(shell find $(SRCDIR) -type f -name *.$(SRCEXT))

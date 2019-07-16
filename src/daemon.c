@@ -1,38 +1,123 @@
-#include "./log.h"
-#include "./bintree.h"
-#include "./typesys.h"
 
-/** Program entry point */
-int main(int argc, char *argv[]) {
+#include "./daemon.h"
 
-  log_init();
+pid_t vs_daemon_pid;
+int vs_daemon_running;
 
-  vsval *s = NULL;
-  vsval *r = NULL;
-  bintree *b = bintree_create();
+/**
+ * The var server's signal handler 
+ */
+void daemon_signal_handler(int sig) {
+  log_info("Server received signal %d", sig);
+
+  switch (sig) {
+    case SIGHUP:
+    case SIGTERM:
+      vs_daemon_running = 0;
+      break;
+  }
+}
 
 
-  if (vsval_create("text", &s) != ERR_SUCCESS) {
-    log_error("Failed to create string");
-    exit(2);
+/**
+ * Daemonizes this application so that it will run in the background
+ */
+int daemon_init() {
+
+  vs_daemon_running = 0;
+
+  /* first fork */
+  pid_t pid = fork();
+
+  if (pid == -1) {
+    log_error("Unable to fork (errno=%d)", errno);
+    return ERR_DMINIT;
+  } else if (pid != 0) {
+    _exit(0);
   }
 
-
-  if (vsval_set_text(s, "Hello, world!") != ERR_SUCCESS) {
-    log_error("Failed to set value");
-    exit(3);
+  /* start a new session */
+  if (setsid() == -1) {
+    log_error("Unable to become session leader (errno=%d)", errno);
+    return ERR_DMINIT;
   }
 
-  bintree_insert(b, "s", s);
-  r = bintree_find(b, "s");
-  
-  vsval_print(r);
-  
-  vsval_destroy(&s);
-  bintree_destroy(&b);
+  /* fork again */
+  signal(SIGHUP, SIG_IGN);
+  pid = fork();
 
-  log_debug("Value destroyed");
+  if (pid == -1) {
+    log_error("Unable to secondary fork (errno=%d)", errno);
+    return ERR_DMINIT;
+  } else if (pid == 0) {
+    _exit(0);
+  }
 
-  log_teardown();
-   return 0;
+  vs_daemon_pid = pid;
+
+  /* change to a known location */
+  if (chdir("/") == -1) {
+    log_error("Unable to change working directory (errno=%d)", errno);
+    return ERR_DMINIT;
+  }
+
+  /* attach the signal handlers */
+  signal(SIGCHLD, SIG_IGN);
+  signal(SIGTSTP, SIG_IGN);
+  signal(SIGTTOU, SIG_IGN);
+  signal(SIGTTIN, SIG_IGN);
+  signal(SIGHUP, daemon_signal_handler);
+  signal(SIGTERM, daemon_signal_handler);
+  
+  /* set the umask */
+  umask(0);
+
+  /* handle the standard file descriptors */
+  close(STDIN_FILENO);
+  close(STDOUT_FILENO);
+  close(STDERR_FILENO);
+
+  if (open("/dev/null", O_RDONLY) == -1) {
+    log_error("Unable to re-open stdin (errno=%d)", errno);
+    return ERR_DMINIT;
+  }
+
+  if (open("/dev/null", O_WRONLY) == -1) {
+    log_error("Unable to re-open stdout (errno=%d)", errno);
+    return ERR_DMINIT;
+  }
+
+  if (open("/dev/null", O_RDWR) == -1) {
+    log_error("Unable to re-open stderr (errno=%d)", errno);
+    return ERR_DMINIT;
+  }
+
+  vs_daemon_running = 1;
+
+  return ERR_SUCCESS;
+}
+
+/**
+ * Tears down the daemon process
+ */
+int daemon_teardown() {
+  log_info("Killing server pid %d", vs_daemon_pid);
+  kill(vs_daemon_pid, SIGTERM);
+
+  return ERR_SUCCESS;
+}
+
+/**
+ * Runs the daemon process
+ */
+int daemon_run() {
+  log_info("Server process is running");
+
+  while (vs_daemon_running) {
+    sleep(5);
+  }
+
+  log_info("Server process is stopping");
+
+  return ERR_SUCCESS;
 }
