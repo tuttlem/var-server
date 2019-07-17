@@ -3,10 +3,17 @@
 #define __varsvr_daemon_h_
 
 #include <errno.h>
+#include <stdlib.h>
 #include <signal.h>
+#include <string.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <sys/ioctl.h>
 #include <sys/stat.h>
+#include <sys/poll.h>
+#include <sys/socket.h>
+#include <sys/time.h>
+#include <netinet/in.h>
 
 #include "./log.h"
 #include "./errors.h"
